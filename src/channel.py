@@ -1,7 +1,9 @@
 import os
 import json
 from googleapiclient.discovery import build
-os.environ['YT_API_KEY'] = 'AIzaSyAqj90FsgBsLUtc0bQYebwrFW4o8Hi-qSk'
+from dotenv import load_dotenv
+
+load_dotenv()
 api_key = os.getenv('YT_API_KEY')
 
 youtube = build('youtube', 'v3', developerKey=api_key)

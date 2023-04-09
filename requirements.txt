@@ -10,3 +10,4 @@ pyparsing~=2.4.7
 zipp~=1.0.0
 future~=0.18.2
 google-api-python-client==2.83.0
+python-dotenv==1.0.0
