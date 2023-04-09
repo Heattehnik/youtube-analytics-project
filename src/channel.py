@@ -1,28 +1,54 @@
 import os
 import json
 from googleapiclient.discovery import build
-# os.environ['YT_API_KEY'] = 'AIzaSyAqj90FsgBsLUtc0bQYebwrFW4o8Hi-qSk'
-api_key = os.getenv('YT_API_KEY')
+from dotenv import load_dotenv
 
-youtube = build('youtube', 'v3', developerKey=api_key)
+load_dotenv()
 
 
 class Channel:
     """Класс для ютуб-канала"""
 
+    api_key = os.getenv('YT_API_KEY')
+    youtube = build('youtube', 'v3', developerKey=api_key)
+
+    @classmethod
+    def get_service(cls):
+        """ Возвращает экземпляр класса Channel"""
+
+        return cls.youtube
+
     def __init__(self, channel_id: str) -> None:
         """Экземпляр инициализируется id канала. Дальше все данные будут подтягиваться по API."""
-        self.channel_id = channel_id
-        self.channel_info = youtube.channels().list(id=self.channel_id, part='snippet,statistics').execute()
-        self.channel_name = self.channel_info.get
-        self.channel_desc = None
-        self.channel_link = None
-        self.channel_subscribers_count = None
-        self.channel_videos_count = None
-        self.views_count = None
+        self.__channel_id = channel_id
+        self.channel_info = Channel.youtube.channels().list(id=self.channel_id, part='snippet,statistics').execute()
+        self.title = self.channel_info['items'][0]['snippet']['title']
+        self.desc = self.channel_info['items'][0]['snippet']['description']
+        self.url = self.channel_info['items'][0]['snippet']['thumbnails']['default']['url']
+        self.subscribers_count = self.channel_info['items'][0]['statistics']['subscriberCount']
+        self.video_count = self.channel_info['items'][0]['statistics']['videoCount']
+        self.views_count = self.channel_info['items'][0]['statistics']['viewCount']
 
+    @property
+    def channel_id(self):
+        return self.__channel_id
 
     def print_info(self) -> None:
         """Выводит в консоль информацию о канале."""
-        response = youtube.channels().list(id=self.channel_id, part='snippet,statistics').execute()
-        print(json.dumps(response, indent=2, ensure_ascii=False))
+        print(json.dumps(self.channel_info, indent=2, ensure_ascii=False))
+
+    def to_json(self, filename):
+        """
+        Метод сохраняет данные о канале в файл json
+        """
+        with open(filename, 'a+', encoding='utf-8') as f:
+            data = {
+                'channel_id': self.__channel_id,
+                'title': self.title,
+                'description': self.desc,
+                'url': self.url,
+                'subscribers_count': self.subscribers_count,
+                'video_count': self.video_count,
+                'views_count': self.views_count
+            }
+            json.dump(data, f, ensure_ascii=False)
