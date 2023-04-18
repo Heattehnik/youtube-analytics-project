@@ -14,3 +14,9 @@ class Video:
         self.video_response = Video.youtube.videos().list(part='snippet,statistics,contentDetails,topicDetails',
                                                           id=self.video_id).execute()
 
+    def show(self):
+        return self.video_response
+
+if __name__ == '__main__':
+    video = Video('9lO06Zxhu88')
+    print(video.show())
