@@ -1,45 +1,56 @@
-from googleapiclient.discovery import build
 from dotenv import load_dotenv
+from googleapiclient.discovery import build
 import os
-import isodate
 import datetime
+import isodate
 
 load_dotenv()
 
 
 class PlayList:
+    """
+    Класс для работы с плейлистами youtube
+    """
     api_key = os.getenv('YT_API_KEY')
     youtube = build('youtube', 'v3', developerKey=api_key)
 
     def __init__(self, playlist_id):
-        self.playlist_id = playlist_id
-        self.playlist_info = self.youtube.playlists().list(id=playlist_id,
-                                                      part='contentDetails,'
-                                                           'snippet',
+        self.__playlist_id = playlist_id
+        self.playlist = self.youtube.playlists().list(id=playlist_id,
+                                                      part='contentDetails, snippet',
                                                       maxResults=50,
                                                       ).execute()
-        print(self.playlist_info)
-        self.__total_duration = datetime.timedelta(seconds=0)
-        self.url = f'https://www.youtube.com/playlist?list={self.playlist_id}'
-        self.title = self.playlist_info['items'][0]['snippet']['title']
+        self.title = self.playlist['items'][0]['snippet']['title']
+        self.url = "https://www.youtube.com/playlist?list=" + playlist_id
+        self.playlist_videos = self.youtube.playlistItems().list(playlistId=self.__playlist_id,
+                                                                 part='contentDetails',
+                                                                 maxResults=50,
+                                                                 ).execute()
+        self.videos_ids = [video['contentDetails']['videoId'] for video in self.playlist_videos['items']]
+        self.video_response = self.youtube.videos().list(
+            part='contentDetails,statistics',
+            id=','.join(self.videos_ids)).execute()
 
     @property
     def total_duration(self):
-        video_ids = [video['contentDetails']['videoId'] for video in self.playlist_info['items']]
-        video_response = PlayList.youtube.videos().list(part='contentDetails',
-                                               id=','.join(video_ids)
-                                               ).execute()
-        print(video_response)
-        for video in video_response['items']:
+        """
+        Определение полной продолжительности видео в плейлисте
+        """
+        full_duration = datetime.timedelta(seconds=0)
+        for video in self.video_response['items']:
             iso_8601_duration = video['contentDetails']['duration']
-            video_duration = isodate.parse_duration(iso_8601_duration)
-            self.__total_duration += video_duration
-        return self.__total_duration
+            duration = isodate.parse_duration(iso_8601_duration)
+            full_duration += duration
+        return full_duration
 
+    def show_best_video(self):
+        """Поиск самого залайконого видео)))"""
+        most_liked = 0
+        url = None
+        for video in self.video_response['items']:
+            likes_count = int(video['statistics']['likeCount'])
+            if most_liked < likes_count:
+                most_liked = likes_count
+                url = "https://youtu.be/" + video['id']
 
-if __name__ == '__main__':
-
-    some = PlayList('PLguYHBi01DWr4bRWc4uaguASmo7lW4GCb')
-    duration = some.total_duration
-    print(duration)
-    print(some.playlist_info)
+        return url
